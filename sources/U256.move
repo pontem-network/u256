@@ -10,7 +10,7 @@
 /// the public domain worldwide. This software is distributed without
 /// any warranty.
 ///
-/// Simplified implemntation by Parity Team - https://github.com/paritytech/parity-common/blob/master/uint/src/uint.rs
+/// Simplified impl by Parity Team - https://github.com/paritytech/parity-common/blob/master/uint/src/uint.rs
 ///
 /// Would be nice to help with the following TODO list:
 /// * Refactoring.
