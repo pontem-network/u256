@@ -1,13 +1,11 @@
 # U256 
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
 Pure Move language implementation of U256 numbers.
 
 Would be nice to help with the following `TODO` list:
 * Refactoring.
 * Gas optimisation.
-* Still missing Div func.
+* Still missing `div` func.
 * More tests.
 
 ### Build
