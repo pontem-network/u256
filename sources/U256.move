@@ -27,10 +27,10 @@ module Sender::U256 {
     // Constants.
 
     /// Max `u64` value.
-    const MAX_U64: u128 = 18446744073709551615;
+    const U64_MAX: u128 = 18446744073709551615;
 
     /// Max `u128` value.
-    const MAX_u128: u128 = 340282366920938463463374607431768211455;
+    const U128_MAX: u128 = 340282366920938463463374607431768211455;
 
     /// Total words in `U256` (64 * 4 = 256).
     const WORDS: u64 = 4;
@@ -223,9 +223,9 @@ module Sender::U256 {
         let b128 = (b as u128);
 
         let r = a128 + b128;
-        if (r > MAX_U64) {
+        if (r > U64_MAX) {
             // overflow
-            let overflow = r - MAX_U64 - 1;
+            let overflow = r - U64_MAX - 1;
             ((overflow as u64), true)
         } else {
             (((a128 + b128) as u64), false)
@@ -238,7 +238,7 @@ module Sender::U256 {
     fun overflowing_sub(a: u64, b: u64): (u64, bool) {
         if (a < b) {
             let r = b - a;
-            ((MAX_U64 as u64) - r + 1, true)
+            ((U64_MAX as u64) - r + 1, true)
         } else {
             (a - b, false)
         }
@@ -273,11 +273,11 @@ module Sender::U256 {
         let s = as_u128(add(a, b));
         assert!(s == 1500, 1);
 
-        a = from_u128(MAX_U64);
-        b = from_u128(MAX_U64);
+        a = from_u128(U64_MAX);
+        b = from_u128(U64_MAX);
 
         s = as_u128(add(a, b));
-        assert!(s == (MAX_U64*2), 2);
+        assert!(s == (U64_MAX *2), 2);
     }
 
     #[test]
@@ -292,7 +292,7 @@ module Sender::U256 {
         let i = 0;
         while (i < WORDS) {
             let j = *Vector::borrow(&overflow.ret, i);
-            assert!(j == (MAX_U64 as u64), 1);
+            assert!(j == (U64_MAX as u64), 1);
             i = i + 1;
         }
     }
@@ -300,8 +300,8 @@ module Sender::U256 {
     #[test]
     #[expected_failure(abort_code = 0)]
     fun test_too_big_to_cast_to_u128() {
-        let a = from_u128(MAX_u128);
-        let b = from_u128(MAX_u128);
+        let a = from_u128(U128_MAX);
+        let b = from_u128(U128_MAX);
 
         let _ = as_u128(add(a, b));
     }
@@ -312,11 +312,11 @@ module Sender::U256 {
         assert!(n == 20, 1);
         assert!(!z, 2);
 
-        (n, z) = overflowing_add((MAX_U64 as u64), 1);
+        (n, z) = overflowing_add((U64_MAX as u64), 1);
         assert!(n == 0, 3);
         assert!(z, 4);
 
-        (n, z) = overflowing_add((MAX_U64 as u64), 10);
+        (n, z) = overflowing_add((U64_MAX as u64), 10);
         assert!(n == 9, 5);
         assert!(z, 6);
 
@@ -332,7 +332,7 @@ module Sender::U256 {
         assert!(!z, 2);
 
         (n, z) = overflowing_sub(0, 1);
-        assert!(n == (MAX_U64 as u64), 3);
+        assert!(n == (U64_MAX as u64), 3);
         assert!(z, 4);
 
         (n, z) = overflowing_sub(10, 10);
@@ -346,7 +346,7 @@ module Sender::U256 {
         assert!(a1 == 0, 0);
         assert!(a2 == 100, 1);
 
-        (a1, a2) = split_u128(MAX_U64 + 1);
+        (a1, a2) = split_u128(U64_MAX + 1);
         assert!(a1 == 1, 2);
         assert!(a2 == 0, 3);
     }
@@ -366,7 +366,7 @@ module Sender::U256 {
 
         assert!(c == 0, 1);
 
-        a = from_u128(MAX_U64);
+        a = from_u128(U64_MAX);
         b = from_u128(2);
 
         c = as_u128(mul(a, b));
