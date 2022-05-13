@@ -35,6 +35,15 @@ module Sender::U256 {
     /// Total words in `U256` (64 * 4 = 256).
     const WORDS: u64 = 4;
 
+    /// When both `U256` equal.
+    const EQUAL: u8 = 0;
+
+    /// When `a` is less than `b`.
+    const LESS_THAN: u8 = 1;
+
+    /// When `b` is greater than `b`.
+    const GREATER_THAN: u8 = 2;
+
     // Data structs.
 
     /// The `U256` resource.
@@ -93,6 +102,32 @@ module Sender::U256 {
         assert!(z == 0, EU128_OVERFLOW);
 
         ((a2 as u128) << 64) + (a1 as u128)
+    }
+
+    /// Compares two `U256` numbers.
+    public fun compare(a: &U256, b: &U256): u8 {
+        let i = WORDS;
+        while (i > 0) {
+            i = i - 1;
+            let a1 = *Vector::borrow(&a.ret, i);
+            let b1 = *Vector::borrow(&b.ret, i);
+
+            if (a1 != b1) {
+                if (a1 < b1) {
+                    return LESS_THAN
+                } else {
+                    return GREATER_THAN
+                }
+            }
+        };
+
+        // Equal.
+        EQUAL
+    }
+
+    /// Returns a `U256` from `u64` value.
+    public fun from_u64(val: u64): U256 {
+        from_u128((val as u128))
     }
 
     /// Returns a `U256` from `u128` value.
@@ -213,6 +248,17 @@ module Sender::U256 {
         U256 { ret }
     }
 
+    /// Returns `U256` equals to zero.
+    public fun zero(): U256 {
+        let ret = Vector::empty<u64>();
+        Vector::push_back(&mut ret, 0);
+        Vector::push_back(&mut ret, 0);
+        Vector::push_back(&mut ret, 0);
+        Vector::push_back(&mut ret, 0);
+
+        U256 { ret }
+    }
+
     // Private functions.
 
     /// Similar to Rust `overflowing_add`.
@@ -260,7 +306,7 @@ module Sender::U256 {
         let i = 0;
         while (i < 1024) {
             let big = from_u128(i);
-            assert!(as_u128(big) == i, 1);
+            assert!(as_u128(big) == i, 0);
             i = i + 1;
         };
     }
@@ -271,13 +317,13 @@ module Sender::U256 {
         let b = from_u128(500);
 
         let s = as_u128(add(a, b));
-        assert!(s == 1500, 1);
+        assert!(s == 1500, 0);
 
         a = from_u128(U64_MAX);
         b = from_u128(U64_MAX);
 
         s = as_u128(add(a, b));
-        assert!(s == (U64_MAX *2), 2);
+        assert!(s == (U64_MAX *2), 1);
     }
 
     #[test]
@@ -309,35 +355,35 @@ module Sender::U256 {
     #[test]
     fun test_overflowing_add() {
         let (n, z) = overflowing_add(10, 10);
-        assert!(n == 20, 1);
-        assert!(!z, 2);
+        assert!(n == 20, 0);
+        assert!(!z, 1);
 
         (n, z) = overflowing_add((U64_MAX as u64), 1);
-        assert!(n == 0, 3);
-        assert!(z, 4);
+        assert!(n == 0, 2);
+        assert!(z, 3);
 
         (n, z) = overflowing_add((U64_MAX as u64), 10);
-        assert!(n == 9, 5);
-        assert!(z, 6);
+        assert!(n == 9, 4);
+        assert!(z, 5);
 
         (n, z) = overflowing_add(5, 8);
-        assert!(n == 13, 7);
-        assert!(!z, 8);
+        assert!(n == 13, 6);
+        assert!(!z, 7);
     }
 
     #[test]
     fun test_overflowing_sub() {
         let (n, z) = overflowing_sub(10, 5);
-        assert!(n == 5, 1);
-        assert!(!z, 2);
+        assert!(n == 5, 0);
+        assert!(!z, 1);
 
         (n, z) = overflowing_sub(0, 1);
-        assert!(n == (U64_MAX as u64), 3);
-        assert!(z, 4);
+        assert!(n == (U64_MAX as u64), 2);
+        assert!(z, 3);
 
         (n, z) = overflowing_sub(10, 10);
-        assert!(n == 0, 5);
-        assert!(!z, 6);
+        assert!(n == 0, 4);
+        assert!(!z, 5);
     }
 
     #[test]
@@ -372,5 +418,38 @@ module Sender::U256 {
         c = as_u128(mul(a, b));
 
         assert!(c == 36893488147419103230, 2);
+    }
+
+    #[test]
+    fun test_zero() {
+        let a = as_u128(zero());
+        assert!(a == 0, 0);
+    }
+
+    #[test]
+    fun test_from_u64() {
+        let a = as_u128(from_u64(100));
+        assert!(a == 100, 0);
+    }
+
+    #[test]
+    fun test_compare() {
+        let a = from_u128(1000);
+        let b = from_u128(50);
+
+        let cmp = compare(&a, &b);
+        assert!(cmp == 2, 0);
+
+        a = from_u128(100);
+        b = from_u128(100);
+        cmp = compare(&a, &b);
+
+        assert!(cmp == 0, 1);
+
+        a = from_u128(50);
+        b = from_u128(75);
+
+        cmp = compare(&a, &b);
+        assert!(cmp == 1, 2);
     }
 }
