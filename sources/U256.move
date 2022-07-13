@@ -97,9 +97,10 @@ module Sender::U256 {
     public fun as_u128(a: U256): u128 {
         let a1 = *Vector::borrow(&a.ret, 0);
         let a2 = *Vector::borrow(&a.ret, 1);
-        let z = *Vector::borrow(&a.ret, 2);
+        let z0 = *Vector::borrow(&a.ret, 2);
+        let z1 = *Vector::borrow(&a.ret, 3);
 
-        assert!(z == 0, EU128_OVERFLOW);
+        assert!(z0 == 0 && z1 == 0, EU128_OVERFLOW);
 
         ((a2 as u128) << 64) + (a1 as u128)
     }
