@@ -464,7 +464,7 @@ module U256::U256 {
     }
 
     /// Get word from `a` by index `i`.
-    fun get(a: &U256, i: u64): u64 {
+    public fun get(a: &U256, i: u64): u64 {
         if (i == 0) {
             a.v0
         } else if (i == 1) {
