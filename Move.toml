@@ -1,6 +1,6 @@
 [package]
 name = "U256"
-version = "0.0.1"
+version = "0.1.0"
 
 [dependencies.MoveStdlib]
 git = "https://github.com/aptos-labs/aptos-core.git"
