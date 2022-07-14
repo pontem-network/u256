@@ -41,7 +41,7 @@
 module Sender::U256 {
     // Errors.
     /// When can't cast `U256` to `u128` (e.g. number too large).
-    const EU128_OVERFLOW: u64 = 0;
+    const ECAST_OVERFLOW: u64 = 0;
 
     /// When trying to get or put word into U256 but it's out of index.
     const EWORDS_OVERFLOW: u64 = 1;
@@ -142,8 +142,14 @@ module Sender::U256 {
 
     /// Convert `U256` to `u128` value if possible (otherwise it aborts).
     public fun as_u128(a: U256): u128 {
-        assert!(a.v2 == 0 && a.v3 == 0, EU128_OVERFLOW);
+        assert!(a.v2 == 0 && a.v3 == 0, ECAST_OVERFLOW);
         ((a.v1 as u128) << 64) + (a.v0 as u128)
+    }
+
+    /// Convert `U256` to `u64` value if possible (otherwise it aborts).
+    public fun as_u64(a: U256): u64 {
+        assert!(a.v1 == 0 && a.v2 == 0 && a.v3 == 0, ECAST_OVERFLOW);
+        a.v0
     }
 
     /// Compares two `U256` numbers.
@@ -999,5 +1005,24 @@ module Sender::U256 {
         let b = from_u128(U64_MAX);
         let d = div(a, b);
         assert!(as_u128(d) == 18446744073709551617, 2);
+    }
+
+    #[test]
+    #[expected_failure(abort_code=3)]
+    fun test_div_by_zero() {
+        let a = from_u128(1);
+        let _z = div(a, from_u128(0));
+    }
+
+    #[test]
+    fun test_as_u64() {
+        let _ = as_u64(from_u64((U64_MAX as u64)));
+        let _ = as_u64(from_u128(1));
+    }
+
+    #[test]
+    #[expected_failure(abort_code=0)]
+    fun test_as_u64_overflow() {
+        let _ = as_u64(from_u128(U128_MAX));
     }
 }
