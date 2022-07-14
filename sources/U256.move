@@ -20,7 +20,7 @@
 ///     * shift left
 ///     * shift right
 ///     * compare
-///     * if math overflows you will get errors.
+///     * if math overflows the contract crashes.
 ///
 /// Would be nice to help with the following TODO list:
 /// * pow() , sqrt().

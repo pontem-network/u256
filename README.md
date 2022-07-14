@@ -2,11 +2,17 @@
 
 Pure Move language implementation of U256 numbers.
 
-Would be nice to help with the following `TODO` list:
-* Refactoring.
-* Gas optimisation.
-* Still missing `div` func.
-* More tests.
+Would be nice to help with the `TODO` list, you can see it in the [header comment](sources/U256.move).
+
+* Features:
+  * mul
+  * div
+  * add
+  * sub
+  * shift left
+  * shift right
+  * compare
+  * if math overflows the contract crashes.
 
 ### Build
 
