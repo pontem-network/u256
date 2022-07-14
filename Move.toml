@@ -9,6 +9,6 @@ subdir = "aptos-move/framework/move-stdlib"
 addr_subst = { Std = "0x1" }
 
 [addresses]
-Sender = "0x1"
+U256 = "b4d7b2466d211c1f4629e8340bb1a9e75e7f8fb38cc145c54c5c9f9d5017a318"
 
 

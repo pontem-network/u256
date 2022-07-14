@@ -24,6 +24,29 @@ The audit still missed, so use at your own risk.
 
     aptos move test
 
+
+## Add as dependency
+
+Add to `Move.toml`:
+
+```toml
+[dependencies.UQ64x64]
+git = "https://github.com/pontem-network/U256.git"
+rev = "v0.1.0"
+```
+
+And then use in code:
+
+```move
+use U256::U256;
+...
+let a = U256::from_u128(10);
+let b = U256::from_u64(10);
+
+let c = U256::add(a, b);
+let z = U256::as_u128(c);
+```
+
 ## License
 
 Apache 2.0
