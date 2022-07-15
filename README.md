@@ -2,11 +2,19 @@
 
 Pure Move language implementation of U256 numbers.
 
-Would be nice to help with the following `TODO` list:
-* Refactoring.
-* Gas optimisation.
-* Still missing `div` func.
-* More tests.
+Would be nice to help with the `TODO` list, you can see it in the [header comment](sources/U256.move).
+
+Supported features:
+* mul
+* div
+* add
+* sub
+* shift left
+* shift right
+* compare
+* if math overflows the contract crashes with abort code.
+
+The audit still missed, so use at your own risk.
 
 ### Build
 
@@ -15,6 +23,29 @@ Would be nice to help with the following `TODO` list:
 ### Test
 
     aptos move test
+
+
+## Add as dependency
+
+Add to `Move.toml`:
+
+```toml
+[dependencies.UQ64x64]
+git = "https://github.com/pontem-network/U256.git"
+rev = "v0.1.0"
+```
+
+And then use in code:
+
+```move
+use U256::U256;
+...
+let a = U256::from_u128(10);
+let b = U256::from_u64(10);
+
+let c = U256::add(a, b);
+let z = U256::as_u128(c);
+```
 
 ## License
 
