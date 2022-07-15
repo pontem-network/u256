@@ -30,7 +30,7 @@ The audit still missed, so use at your own risk.
 Add to `Move.toml`:
 
 ```toml
-[dependencies.UQ64x64]
+[dependencies.U256]
 git = "https://github.com/pontem-network/U256.git"
 rev = "v0.1.0"
 ```
