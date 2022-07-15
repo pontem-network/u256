@@ -30,7 +30,6 @@
 /// * Gas Optimisation:
 ///     * We can optimize by replacing bytecode, as far as we know Move VM itself support slices, so probably
 ///       we can try to replace parts works with (`v0`,`v1`,`v2`,`v3` etc) works.
-///     * `leading_zeros_u64` can be optimized by getting two `u32` from one `u64`.
 ///     * More?
 /// * More tests (see current tests and TODOs i left):
 ///     * u256_arithmetic_test - https://github.com/paritytech/bigint/blob/master/src/uint.rs#L1338
@@ -71,9 +70,6 @@ module U256::U256 {
 
     /// When `b` is greater than `b`.
     const GREATER_THAN: u8 = 2;
-
-    /// Count of bits in word.
-    const MAX_BITS_IN_WORD: u8 = 64;
 
     // Data structs.
 
@@ -412,18 +408,38 @@ module U256::U256 {
 
     /// Get leading zeros of a binary representation of `a`.
     fun leading_zeros_u64(a: u64): u8 {
-        let counter = MAX_BITS_IN_WORD;
-
-        while (counter >= 1) {
-            let b = (a >> (counter - 1)) & 1;
-            if (b != 0) {
-                break
-            };
-
-            counter = counter - 1;
+        if (a == 0) {
+            return 64
         };
 
-        MAX_BITS_IN_WORD - counter
+        let a1 = a & 0xFFFFFFFF;
+        let a2 = a >> 32;
+
+        if (a2 == 0) {
+            let bit = 32;
+
+            while (bit >= 1) {
+                let b = (a1 >> (bit-1)) & 1;
+                if (b != 0) {
+                    break
+                };
+
+                bit = bit - 1;
+            };
+
+            (32 - bit) + 32
+        } else {
+            let bit = 64;
+            while (bit >= 1) {
+                let b = (a >> (bit-1)) & 1;
+                if (b != 0) {
+                    break
+                };
+                bit = bit - 1;
+            };
+
+            64 - bit
+        }
     }
 
     /// Similar to Rust `overflowing_add`.
