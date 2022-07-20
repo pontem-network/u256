@@ -32,19 +32,19 @@ Add to `Move.toml`:
 ```toml
 [dependencies.U256]
 git = "https://github.com/pontem-network/U256.git"
-rev = "v0.2.0"
+rev = "v0.3.0"
 ```
 
 And then use in code:
 
 ```move
-use U256::U256;
+use u256::u256;
 ...
-let a = U256::from_u128(10);
-let b = U256::from_u64(10);
+let a = u256::from_u128(10);
+let b = u256::from_u64(10);
 
-let c = U256::add(a, b);
-let z = U256::as_u128(c);
+let c = u256::add(a, b);
+let z = u256::as_u128(c);
 ```
 
 ## License
