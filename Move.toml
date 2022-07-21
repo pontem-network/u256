@@ -1,14 +1,12 @@
 [package]
 name = "U256"
-version = "0.1.0"
+version = "0.3.0"
 
 [dependencies.MoveStdlib]
 git = "https://github.com/aptos-labs/aptos-core.git"
-rev = "49f08c7419b442461e47164848305fe74e846607"
+rev = "a3143756d498821f4f51a5970c7ea35d483938b3"
 subdir = "aptos-move/framework/move-stdlib"
-addr_subst = { Std = "0x1" }
+addr_subst = { std = "0x1" }
 
 [addresses]
-U256 = "b4d7b2466d211c1f4629e8340bb1a9e75e7f8fb38cc145c54c5c9f9d5017a318"
-
-
+u256 = "43417434fd869edee76cca2a4d2301e528a1551b1d719b75c350c3c97d15b8b9"
