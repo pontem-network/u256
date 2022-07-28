@@ -4,7 +4,7 @@ version = "0.3.0"
 
 [dependencies.MoveStdlib]
 git = "https://github.com/aptos-labs/aptos-core.git"
-rev = "a3143756d498821f4f51a5970c7ea35d483938b3"
+rev = "a1dc2e66e49ded056c10318f476e0096d0d17a6f"
 subdir = "aptos-move/framework/move-stdlib"
 addr_subst = { std = "0x1" }
 
