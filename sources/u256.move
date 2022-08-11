@@ -1041,4 +1041,23 @@ module u256::u256 {
     fun test_as_u64_overflow() {
         let _ = as_u64(from_u128(U128_MAX));
     }
+
+    #[test]
+    fun test_u256_max() {
+        let _e8 = from_u128(100000000);
+
+        let x = U64_MAX;
+        let y = U64_MAX - (U64_MAX / 3);
+
+        let _x = from_u128(x);
+        let _y = from_u128(y);
+
+        let _xy = mul(_x, _y);
+        let _xx = mul(_x, _x);
+        let _yy = mul(_y, _y);
+
+        let _b = add(_xx, _yy);
+
+        let _r = mul(_xy, _b);
+    }
 }
