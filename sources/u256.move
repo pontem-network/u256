@@ -101,35 +101,55 @@ module u256::u256 {
         let ret = zero();
         let carry = 0u64;
 
-        let i = 0;
-        while (i < WORDS) {
-            let a1 = get(&a, i);
-            let b1 = get(&b, i);
+        let a_0 = a.v0;
+        let b_0 = b.v0;
 
-            if (carry != 0) {
-                let (res1, is_overflow1) = overflowing_add(a1, b1);
-                let (res2, is_overflow2) = overflowing_add(res1, carry);
-                put(&mut ret, i, res2);
+        let (r_0, o_0) = overflowing_add(a_0, b_0);
+        if (o_0) {
+            carry = 1;
+        };
+        ret.v0 = r_0;
 
-                carry = 0;
-                if (is_overflow1) {
-                    carry = carry + 1;
-                };
+        let a_1 = a.v1;
+        let b_1 = b.v1;
+        let (r_1, o_1_1) = overflowing_add(a_1, b_1);
+        let (r_1, o_1_2) = overflowing_add(r_1, carry);
+        ret.v1 = r_1;
 
-                if (is_overflow2) {
-                    carry = carry + 1;
-                }
-            } else {
-                let (res, is_overflow) = overflowing_add(a1, b1);
-                put(&mut ret, i, res);
+        carry = if (o_1_1 && o_1_2) {
+            2
+        } else if (o_1_1 || o_1_2) {
+            1
+        } else {
+            0
+        };
 
-                carry = 0;
-                if (is_overflow) {
-                    carry = 1;
-                };
-            };
+        let a_2 = a.v2;
+        let b_2 = b.v2;
+        let (r_2, o_2_1) = overflowing_add(a_2, b_2);
+        let (r_2, o_2_2) = overflowing_add(r_2, carry);
+        ret.v2 = r_2;
 
-            i = i + 1;
+        carry = if (o_2_1 && o_2_2) {
+            2
+        } else if (o_2_1 || o_2_2) {
+            1
+        } else {
+            0
+        };
+
+        let a_3 = a.v3;
+        let b_3 = b.v3;
+        let (r_3, o_3_1) = overflowing_add(a_3, b_3);
+        let (r_3, o_3_2) = overflowing_add(r_3, carry);
+        ret.v3 = r_3;
+
+        carry = if (o_3_1 && o_3_2) {
+            2
+        } else if (o_3_1 || o_3_2) {
+            1
+        } else {
+            0
         };
 
         assert!(carry == 0, EOVERFLOW);
@@ -434,6 +454,16 @@ module u256::u256 {
         ret
     }
 
+    /// Returns max value.
+    public fun max(): U256 {
+        U256 {
+            v0: (U64_MAX as u64),
+            v1: (U64_MAX as u64),
+            v2: (U64_MAX as u64),
+            v3: (U64_MAX as u64)
+        }
+    }
+
     /// Returns `U256` equals to zero.
     public fun zero(): U256 {
         U256 {
@@ -501,17 +531,16 @@ module u256::u256 {
     /// Returns a tuple of the addition along with a boolean indicating whether an arithmetic overflow would occur.
     /// If an overflow would have occurred then the wrapped value is returned.
     fun overflowing_add(a: u64, b: u64): (u64, bool) {
-        let a128 = (a as u128);
-        let b128 = (b as u128);
+        let r = (U64_MAX as u64) - b;
+        if (r < a) {
+            return (a - r - 1, true)
+        };
+        r = (U64_MAX as u64) - a;
+        if (r < b) {
+            return (b - r - 1, true)
+        };
 
-        let r = a128 + b128;
-        if (r > U64_MAX) {
-            // overflow
-            let overflow = r - U64_MAX - 1;
-            ((overflow as u64), true)
-        } else {
-            (((a128 + b128) as u64), false)
-        }
+        (a + b, false)
     }
 
     /// Similar to Rust `overflowing_sub`.
@@ -818,6 +847,11 @@ module u256::u256 {
 
         s = as_u128(add(a, b));
         assert!(s == (U64_MAX + U64_MAX), 1);
+
+        let a = zero();
+        let b = zero();
+        let s = add(a, b);
+        assert!(as_u128(s) == 0, 2);
     }
 
     #[test]
