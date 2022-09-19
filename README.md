@@ -11,6 +11,7 @@ Supported features:
 * sub
 * shift left
 * shift right
+* bitwise and, xor, or
 * compare
 * if math overflows the contract crashes with abort code.
 
