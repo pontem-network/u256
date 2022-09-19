@@ -19,6 +19,7 @@
 ///     * sub
 ///     * shift left
 ///     * shift right
+///     * bitwise and, xor, or.
 ///     * compare
 ///     * if math overflows the contract crashes.
 ///
@@ -321,6 +322,54 @@ module u256::u256 {
             };
 
             shift = shift - 1;
+        };
+
+        ret
+    }
+
+    /// Binary xor `a` by `b`.
+    fun bitxor(a: U256, b: U256): U256 {
+        let ret = zero();
+
+        let i = 0;
+        while (i < WORDS) {
+            let a1 = get(&a, i);
+            let b1 = get(&b, i);
+            put(&mut ret, i, a1 ^ b1);
+
+            i = i + 1;
+        };
+
+        ret
+    }
+
+    /// Binary and `a` by `b`.
+    fun bitand(a: U256, b: U256): U256 {
+        let ret = zero();
+
+        let i = 0;
+        while (i < WORDS) {
+            let a1 = get(&a, i);
+            let b1 = get(&b, i);
+            put(&mut ret, i, a1 & b1);
+
+            i = i + 1;
+        };
+
+        ret
+    }
+
+    /// Binary or `a` by `b`.
+    fun bitor(a: U256, b: U256): U256 {
+        let ret = zero();
+
+        let i = 0;
+        while (i < WORDS) {
+            let a1 = get(&a, i);
+            let b1 = get(&b, i);
+            put(&mut ret, i, a1 | b1);
+
+            i = i + 1;
         };
 
         ret
@@ -906,6 +955,50 @@ module u256::u256 {
         assert!(a.v1 == 0, 2);
         assert!(a.v2 == 0, 3);
         assert!(a.v3 == 0, 4);
+    }
+
+    #[test]
+    fun test_or() {
+        let a = from_u128(0);
+        let b = from_u128(1);
+        let c = bitor(a, b);
+        assert!(as_u128(c) == 1, 0);
+
+        let a = from_u128(0x0f0f0f0f0f0f0f0fu128);
+        let b = from_u128(0xf0f0f0f0f0f0f0f0u128);
+        let c = bitor(a, b);
+        assert!(as_u128(c) == 0xffffffffffffffffu128, 1);
+    }
+
+    #[test]
+    fun test_and() {
+        let a = from_u128(0);
+        let b = from_u128(1);
+        let c = bitand(a, b);
+        assert!(as_u128(c) == 0, 0);
+
+        let a = from_u128(0x0f0f0f0f0f0f0f0fu128);
+        let b = from_u128(0xf0f0f0f0f0f0f0f0u128);
+        let c = bitand(a, b);
+        assert!(as_u128(c) == 0, 1);
+
+        let a = from_u128(0x0f0f0f0f0f0f0f0fu128);
+        let b = from_u128(0x0f0f0f0f0f0f0f0fu128);
+        let c = bitand(a, b);
+        assert!(as_u128(c) == 0x0f0f0f0f0f0f0f0fu128, 1);
+    }
+
+    #[test]
+    fun test_xor() {
+        let a = from_u128(0);
+        let b = from_u128(1);
+        let c = bitxor(a, b);
+        assert!(as_u128(c) == 1, 0);
+
+        let a = from_u128(0x0f0f0f0f0f0f0f0fu128);
+        let b = from_u128(0xf0f0f0f0f0f0f0f0u128);
+        let c = bitxor(a, b);
+        assert!(as_u128(c) == 0xffffffffffffffffu128, 1);
     }
 
     #[test]
