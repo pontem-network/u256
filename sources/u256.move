@@ -326,7 +326,6 @@ module u256::u256 {
         ret
     }
 
-    // API
     /// Binary xor `a` by `b`.
     fun bitxor(a: U256, b: U256): U256 {
         let ret = zero();
@@ -343,7 +342,6 @@ module u256::u256 {
         ret
     }
 
-    // API
     /// Binary and `a` by `b`.
     fun bitand(a: U256, b: U256): U256 {
         let ret = zero();
@@ -360,7 +358,6 @@ module u256::u256 {
         ret
     }
 
-    // API
     /// Binary or `a` by `b`.
     fun bitor(a: U256, b: U256): U256 {
         let ret = zero();
