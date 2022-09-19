@@ -1,6 +1,6 @@
 spec u256::u256 {
     spec fun max_u256(): num {
-         (U128_MAX << 128) + U128_MAX
+        (U128_MAX << 128) + U128_MAX
     }
 
     spec fun num_val(a: U256): num {
