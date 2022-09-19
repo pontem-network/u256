@@ -10,4 +10,9 @@ spec u256::u256 {
     spec div {
         pragma opaque;
     }
+
+    spec zero {
+        aborts_if false;
+
+    }
 }

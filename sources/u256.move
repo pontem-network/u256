@@ -332,7 +332,8 @@ module u256::u256 {
         ret
     }
 
-    /// Binary xor `a` by `b`.
+    // TODO: uncomment it once formal verification done and disabled.
+    // /// Binary xor `a` by `b`.
     // fun bitxor(a: U256, b: U256): U256 {
     //     let ret = zero();
     //
