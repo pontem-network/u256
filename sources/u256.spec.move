@@ -47,7 +47,6 @@ spec u256::u256 {
     }
 
     spec sub {
-        pragma verify = false;
         ensures num_val(result) == num_val(a) - num_val(b);
     }
 
