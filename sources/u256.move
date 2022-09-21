@@ -274,38 +274,50 @@ module u256::u256 {
 
         let carry = 0u64;
 
-        let i = 0;
-        while (i < WORDS) {
-            let a1 = get(&a, i);
-            let b1 = get(&b, i);
+        let a_0 = a.v0;
+        let b_0 = b.v0;
+        let (r_0, o_0) = overflowing_sub(a_0, b_0);
+        if (o_0) {
+            carry = 1;
+        };
+        ret.v0 = r_0;
 
-            if (carry != 0) {
-                let (res1, is_overflow1) = overflowing_sub(a1, b1);
-                let (res2, is_overflow2) = overflowing_sub(res1, carry);
-                put(&mut ret, i, res2);
+        let a_1 = a.v1;
+        let b_1 = b.v1;
+        let (r_1, o_1_1) = overflowing_sub(a_1, b_1);
+        let (r_1, o_1_2) = overflowing_sub(r_1, carry);
+        ret.v1 = r_1;
 
-                carry = 0;
-                if (is_overflow1) {
-                    carry = carry + 1;
-                };
-
-                if (is_overflow2) {
-                    carry = carry + 1;
-                }
-            } else {
-                let (res, is_overflow) = overflowing_sub(a1, b1);
-                put(&mut ret, i, res);
-
-                carry = 0;
-                if (is_overflow) {
-                    carry = 1;
-                };
-            };
-
-            i = i + 1;
+        carry = if (o_1_1 && o_1_2) {
+            2
+        } else if (o_1_1 || o_1_2) {
+            1
+        } else {
+            0
         };
 
-        assert!(carry == 0, EOVERFLOW);
+        let a_2 = a.v2;
+        let b_2 = a.v2;
+        let (r_2, o_2_1) = overflowing_sub(a_2, b_2);
+        let (r_2, o_2_2) = overflowing_sub(r_2, carry);
+        ret.v2 = r_2;
+
+        carry = if (o_2_1 && o_2_2) {
+            2
+        } else if (o_2_1 || o_2_2) {
+            1
+        } else {
+            0
+        };
+
+        let a_3 = a.v3;
+        let b_3 = b.v3;
+        let (r_3, o_3_1) = overflowing_sub(a_3, b_3);
+        let (r_3, o_3_2) = overflowing_sub(r_3, carry);
+        ret.v3 = r_3;
+
+        assert!(!o_3_1 && !o_3_2, EOVERFLOW);
+
         ret
     }
 
