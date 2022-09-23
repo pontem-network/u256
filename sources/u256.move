@@ -99,60 +99,45 @@ module u256::u256 {
     /// Adds two `U256` and returns sum.
     public fun add(a: U256, b: U256): U256 {
         let ret = zero();
-        let carry = 0u64;
+        let carry;
 
-        let a_0 = a.v0;
-        let b_0 = b.v0;
-
-        let (r_0, o_0) = overflowing_add(a_0, b_0);
-        if (o_0) {
-            carry = 1;
-        };
-        ret.v0 = r_0;
-
-        let a_1 = a.v1;
-        let b_1 = b.v1;
-        let (r_1, o_1_1) = overflowing_add(a_1, b_1);
-        let (r_1, o_1_2) = overflowing_add(r_1, carry);
-        ret.v1 = r_1;
-
-        carry = if (o_1_1 && o_1_2) {
-            2
-        } else if (o_1_1 || o_1_2) {
+        let (r, o) = overflowing_add(a.v0, b.v0);
+        ret.v0 = r;
+        carry = if (o) {
             1
         } else {
             0
         };
 
-        let a_2 = a.v2;
-        let b_2 = b.v2;
-        let (r_2, o_2_1) = overflowing_add(a_2, b_2);
-        let (r_2, o_2_2) = overflowing_add(r_2, carry);
-        ret.v2 = r_2;
+        let (r, o1) = overflowing_add(a.v1, b.v1);
+        let (r, o2) = overflowing_add(r, carry);
+        ret.v1 = r;
 
-        carry = if (o_2_1 && o_2_2) {
+        carry = if (o1 && o2) {
             2
-        } else if (o_2_1 || o_2_2) {
+        } else if (o1 || o2) {
             1
         } else {
             0
         };
 
-        let a_3 = a.v3;
-        let b_3 = b.v3;
-        let (r_3, o_3_1) = overflowing_add(a_3, b_3);
-        let (r_3, o_3_2) = overflowing_add(r_3, carry);
-        ret.v3 = r_3;
+        let (r, o1) = overflowing_add(a.v2, b.v2);
+        let (r, o2) = overflowing_add(r, carry);
+        ret.v2 = r;
 
-        carry = if (o_3_1 && o_3_2) {
+        carry = if (o1 && o2) {
             2
-        } else if (o_3_1 || o_3_2) {
+        } else if (o1 || o2) {
             1
         } else {
             0
         };
 
-        assert!(carry == 0, EOVERFLOW);
+        let (r, o1) = overflowing_add(a.v3, b.v3);
+        let (r, o2) = overflowing_add(r, carry);
+        ret.v3 = r;
+
+        assert!(!o1 && !o2, EOVERFLOW);
 
         ret
     }
@@ -171,19 +156,28 @@ module u256::u256 {
 
     /// Compares two `U256` numbers.
     public fun compare(a: &U256, b: &U256): u8 {
-        let i = WORDS;
-        while (i > 0) {
-            i = i - 1;
-            let a1 = get(a, i);
-            let b1 = get(b, i);
+        if (a.v3 < b.v3) {
+            return LESS_THAN
+        } else if (a.v3 > b.v3) {
+            return GREATER_THAN
+        };
 
-            if (a1 != b1) {
-                if (a1 < b1) {
-                    return LESS_THAN
-                } else {
-                    return GREATER_THAN
-                }
-            }
+        if (a.v2 < b.v2) {
+            return LESS_THAN
+        } else if (a.v2 > b.v2) {
+            return GREATER_THAN
+        };
+
+        if (a.v1 < b.v1) {
+            return LESS_THAN
+        } else if (a.v1 > b.v1) {
+            return GREATER_THAN
+        };
+
+        if (a.v0 < b.v0) {
+            return LESS_THAN
+        } else if (a.v0 > b.v0) {
+            return GREATER_THAN
         };
 
         EQUAL
@@ -206,117 +200,160 @@ module u256::u256 {
         }
     }
 
+
     /// Multiples two `U256`.
     public fun mul(a: U256, b: U256): U256 {
-        let ret = DU256 {
-            v0: 0,
-            v1: 0,
-            v2: 0,
-            v3: 0,
-            v4: 0,
-            v5: 0,
-            v6: 0,
-            v7: 0,
+        let ret = zero();
+
+        // swap if a < b so that a is always bigger than b
+        if (compare(&a, &b) == LESS_THAN) {
+            let temp = a;
+            a = b;
+            b = temp;
         };
 
-        let i = 0;
-        while (i < WORDS) {
-            let carry = 0u64;
-            let b1 = get(&b, i);
+        // check overflow operations first
+        let a_zeroes = leading_zeros_u64_block(a);
+        let b_zeroes = leading_zeros_u64_block(b);
 
-            let j = 0;
-            while (j < WORDS) {
-                let a1 = get(&a, j);
+        assert!(a_zeroes + b_zeroes >= 3, EOVERFLOW);
 
-                if (a1 != 0 || carry != 0) {
-                    let (hi, low) = split_u128((a1 as u128) * (b1 as u128));
+        // for b, we don't need to consider v2, v3 as it will be overflow
 
-                    let overflow = {
-                        let existing_low = get_d(&ret, i + j);
-                        let (low, o) = overflowing_add(low, existing_low);
-                        put_d(&mut ret, i + j, low);
-                        if (o) {
-                            1
-                        } else {
-                            0
-                        }
-                    };
-
-                    carry = {
-                        let existing_hi = get_d(&ret, i + j + 1);
-                        let hi = hi + overflow;
-                        let (hi, o0) = overflowing_add(hi, carry);
-                        let (hi, o1) = overflowing_add(hi, existing_hi);
-                        put_d(&mut ret, i + j + 1, hi);
-
-                        if (o0 || o1) {
-                            1
-                        } else {
-                            0
-                        }
-                    };
-                };
-
-                j = j + 1;
-            };
-
-            i = i + 1;
+        if (b.v0 == 0) {
+            return ret
         };
 
-        let (r, overflow) = du256_to_u256(ret);
-        assert!(!overflow, EOVERFLOW);
-        r
+        let carry: u64;
+        let overflow: u64;
+        let (hi, low) = split_u128((a.v0 as u128) * (b.v0 as u128));
+        ret.v0 = low;
+        ret.v1 = hi;
+
+        let (hi, low) = split_u128((a.v1 as u128) * (b.v0 as u128));
+        let (low, o) = overflowing_add(ret.v1, low);
+        ret.v1 = low;
+        overflow = if (o) {
+            1
+        } else {
+            0
+        };
+        let (low, o) = overflowing_add(hi, overflow);
+        ret.v2 = low;
+        carry = if (o) {
+            1
+        } else {
+            0
+        };
+
+        let (hi, low) = split_u128((a.v2 as u128) * (b.v0 as u128));
+        let (low, o) = overflowing_add(ret.v2, low);
+        ret.v2 = low;
+        overflow = if (o) {
+            1
+        } else {
+            0
+        };
+        let (hi, o) = overflowing_add(hi, carry + overflow);
+        ret.v3 = hi;
+        assert!(!o, EOVERFLOW);
+
+        let (hi, low) = split_u128((a.v3 as u128) * (b.v0 as u128));
+        let (low, o) = overflowing_add(ret.v3, low);
+        ret.v3 = low;
+        assert!(hi == 0 && !o, EOVERFLOW);
+
+        //////////////
+
+        if (b.v1 == 0) {
+            return ret
+        };
+
+        let (hi, low) = split_u128((a.v0 as u128) * (b.v1 as u128));
+        let (low, o) = overflowing_add(ret.v1, low);
+        ret.v1 = low;
+        overflow = if (o) {
+            1
+        } else {
+            0
+        };
+        let (hi, o1) = overflowing_add(hi, overflow);
+        let (hi, o2) = overflowing_add(ret.v2, hi);
+        ret.v2 = hi;
+        carry = if (o1 || o2) {
+            1
+        } else {
+            0
+        };
+
+        let (hi, low) = split_u128((a.v1 as u128) * (b.v1 as u128));
+        let (low, o) = overflowing_add(ret.v2, low);
+        ret.v2 = low;
+        overflow = if (o) {
+            1
+        } else {
+            0
+        };
+        let (hi, o1) = overflowing_add(hi, carry + overflow);
+        let (hi, o2) = overflowing_add(ret.v3, hi);
+        ret.v3 = hi;
+        // if there is a carry out, it's overflow
+        assert!(!o1 && !o2, EOVERFLOW);
+
+        let (hi, low) = split_u128((a.v2 as u128) * (b.v1 as u128));
+        let (low, o) = overflowing_add(ret.v3, low);
+        ret.v3 = low;
+        assert!(hi == 0 && !o, EOVERFLOW);
+
+        // no need to calculate for a.v3 as it will be overflow
+        assert!(a.v3 == 0, EOVERFLOW);
+
+        ret
     }
 
     /// Subtracts two `U256`, returns result.
     public fun sub(a: U256, b: U256): U256 {
         let ret = zero();
 
-        let carry = 0u64;
+        let carry: u64;
 
-        let a_0 = a.v0;
-        let b_0 = b.v0;
-        let (r_0, o_0) = overflowing_sub(a_0, b_0);
-        if (o_0) {
-            carry = 1;
-        };
-        ret.v0 = r_0;
-
-        let a_1 = a.v1;
-        let b_1 = b.v1;
-        let (r_1, o_1_1) = overflowing_sub(a_1, b_1);
-        let (r_1, o_1_2) = overflowing_sub(r_1, carry);
-        ret.v1 = r_1;
-
-        carry = if (o_1_1 && o_1_2) {
-            2
-        } else if (o_1_1 || o_1_2) {
+        let (r, o) = overflowing_sub(a.v0, b.v0);
+        ret.v0 = r;
+        carry = if (o) {
             1
         } else {
             0
         };
 
-        let a_2 = a.v2;
-        let b_2 = a.v2;
-        let (r_2, o_2_1) = overflowing_sub(a_2, b_2);
-        let (r_2, o_2_2) = overflowing_sub(r_2, carry);
-        ret.v2 = r_2;
+        let (r, o1) = overflowing_sub(a.v1, b.v1);
+        let (r, o2) = overflowing_sub(r, carry);
+        ret.v1 = r;
 
-        carry = if (o_2_1 && o_2_2) {
+        carry = if (o1 && o2) {
             2
-        } else if (o_2_1 || o_2_2) {
+        } else if (o1 || o2) {
             1
         } else {
             0
         };
 
-        let a_3 = a.v3;
-        let b_3 = b.v3;
-        let (r_3, o_3_1) = overflowing_sub(a_3, b_3);
-        let (r_3, o_3_2) = overflowing_sub(r_3, carry);
-        ret.v3 = r_3;
+        let (r, o1) = overflowing_sub(a.v2, b.v2);
+        let (r, o2) = overflowing_sub(r, carry);
+        ret.v2 = r;
 
-        assert!(!o_3_1 && !o_3_2, EOVERFLOW);
+        carry = if (o1 && o2) {
+            2
+        } else if (o1 || o2) {
+            1
+        } else {
+            0
+        };
+
+        let (r, o1) = overflowing_sub(a.v3, b.v3);
+        let (r, o2) = overflowing_sub(r, carry);
+        ret.v3 = r;
+
+        assert!(!o1 && !o2, EOVERFLOW);
 
         ret
     }
@@ -501,6 +538,21 @@ module u256::u256 {
 
         let a1 = get(a, 0);
         0x40 - (leading_zeros_u64(a1) as u64)
+    }
+
+    /// Get leading zeros of u64 blocks
+    fun leading_zeros_u64_block(a: U256): u8 {
+        if (a.v0 == 0) {
+            return 4
+        } else if (a.v1 == 0) {
+            return 3
+        } else if (a.v2 == 0) {
+            return 2
+        } else if (a.v3 == 0) {
+            return 1
+        };
+
+        0
     }
 
     /// Get leading zeros of a binary representation of `a`.
