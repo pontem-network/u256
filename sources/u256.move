@@ -454,23 +454,27 @@ module u256::u256 {
     public fun shr(a: U256, shift: u8): U256 {
         let ret = zero();
 
-        let word_shift = (shift as u64) / 64;
-        let bit_shift = (shift as u64) % 64;
+        let word_shift = shift / 64;
+        let bit_shift = shift % 64;
 
-        let i = word_shift;
-        while (i < WORDS) {
-            let m = get(&a, i) >> (bit_shift as u8);
-            put(&mut ret, i - word_shift, m);
-            i = i + 1;
+        if (word_shift == 0) {
+            ret = a;
+        } else if (word_shift == 1) {
+            ret.v0 = a.v1;
+            ret.v1 = a.v2;
+            ret.v2 = a.v3;
+        } else if (word_shift == 2) {
+            ret.v0 = a.v2;
+            ret.v1 = a.v3;
+        } else if (word_shift == 3) {
+            ret.v0 = a.v3;
         };
 
         if (bit_shift > 0) {
-            let j = word_shift + 1;
-            while (j < WORDS) {
-                let m = get(&ret, j - word_shift - 1) + (get(&a, j) << (64 - (bit_shift as u8)));
-                put(&mut ret, j - word_shift - 1, m);
-                j = j + 1;
-            };
+            ret.v0 = (ret.v0 >> bit_shift) + (ret.v1 << (64 - bit_shift));
+            ret.v1 = (ret.v1 >> bit_shift) + (ret.v2 << (64 - bit_shift));
+            ret.v2 = (ret.v2 >> bit_shift) + (ret.v3 << (64 - bit_shift));
+            ret.v3 = ret.v3 >> bit_shift;
         };
 
         ret
@@ -480,24 +484,27 @@ module u256::u256 {
     public fun shl(a: U256, shift: u8): U256 {
         let ret = zero();
 
-        let word_shift = (shift as u64) / 64;
-        let bit_shift = (shift as u64) % 64;
+        let word_shift = shift / 64;
+        let bit_shift = shift % 64;
 
-        let i = word_shift;
-        while (i < WORDS) {
-            let m = get(&a, i - word_shift) << (bit_shift as u8);
-            put(&mut ret, i, m);
-            i = i + 1;
+        if (word_shift == 0) {
+            ret = a;
+        } else if (word_shift == 1) {
+            ret.v3 = a.v2;
+            ret.v2 = a.v1;
+            ret.v1 = a.v0;
+        } else if (word_shift == 2) {
+            ret.v3 = a.v1;
+            ret.v2 = a.v0;
+        } else if (word_shift == 3) {
+            ret.v3 = a.v0;
         };
 
         if (bit_shift > 0) {
-            let j = word_shift + 1;
-
-            while (j < WORDS) {
-                let m = get(&ret, j) + (get(&a, j - 1 - word_shift) >> (64 - (bit_shift as u8)));
-                put(&mut ret, j, m);
-                j = j + 1;
-            };
+            ret.v3 = (ret.v3 << bit_shift) + (ret.v2 >> (64 - bit_shift));
+            ret.v2 = (ret.v2 << bit_shift) + (ret.v1 >> (64 - bit_shift));
+            ret.v1 = (ret.v1 << bit_shift) + (ret.v0 >> (64 - bit_shift));
+            ret.v0 = ret.v0 << bit_shift;
         };
 
         ret
@@ -526,18 +533,19 @@ module u256::u256 {
     // Private functions.
     /// Get bits used to store `a`.
     fun bits(a: &U256): u64 {
-        let i = 1;
-        while (i < WORDS) {
-            let a1 = get(a, WORDS - i);
-            if (a1 > 0) {
-                return ((0x40 * (WORDS - i + 1)) - (leading_zeros_u64(a1) as u64))
-            };
-
-            i = i + 1;
+        if (a.v3 > 0) {
+            return 0x40 * 4 - (leading_zeros_u64(a.v3) as u64)
         };
 
-        let a1 = get(a, 0);
-        0x40 - (leading_zeros_u64(a1) as u64)
+        if (a.v2 > 0) {
+            return 0x40 * 3 - (leading_zeros_u64(a.v2) as u64)
+        };
+
+        if (a.v1 > 0) {
+            return 0x40 * 2 - (leading_zeros_u64(a.v1) as u64)
+        };
+
+        0x40 - (leading_zeros_u64(a.v0) as u64)
     }
 
     /// Get leading zeros of u64 blocks
@@ -555,40 +563,74 @@ module u256::u256 {
         0
     }
 
+    fun leading_zeros_u4(a: u8): u8 {
+        if (a == 0) {
+            4
+        } else if (a == 1) {
+            3
+        } else if (a <= 3) {
+            2
+        } else if (a <= 7) {
+            1
+        } else {
+            0
+        }
+    }
+
+    fun leading_zeros_u8(a: u8): u8 {
+        let a1 = a % 0x80;
+        let a2 = a >> 4;
+        if (a2 == 0) {
+            4 + leading_zeros_u4(a1)
+        } else {
+            leading_zeros_u4(a2)
+        }
+    }
+
     /// Get leading zeros of a binary representation of `a`.
     fun leading_zeros_u64(a: u64): u8 {
         if (a == 0) {
             return 64
         };
 
-        let a1 = a % (0xFFFFFFFF + 1);
-        let a2 = a >> 32;
+        // first 8 bits
+        let a_chunk = a >> 56;
 
-        if (a2 == 0) {
-            let bit = 32;
+        if (a_chunk > 0) {
+            return leading_zeros_u8((a_chunk as u8))
+        };
 
-            while (bit >= 1) {
-                let b = (a1 >> (bit-1)) % 2;
-                if (b != 0) {
-                    break
-                };
+        a_chunk = a >> 48;
+        if (a_chunk > 0) {
+            return 8 + leading_zeros_u8((a_chunk as u8))
+        };
 
-                bit = bit - 1;
-            };
+        a_chunk = a >> 40;
+        if (a_chunk > 0) {
+            return 16 + leading_zeros_u8((a_chunk as u8))
+        };
 
-            (32 - bit) + 32
-        } else {
-            let bit = 64;
-            while (bit >= 1) {
-                let b = (a >> (bit-1)) % 2;
-                if (b != 0) {
-                    break
-                };
-                bit = bit - 1;
-            };
+        a_chunk = a >> 32;
+        if (a_chunk > 0) {
+            return 24 + leading_zeros_u8((a_chunk as u8))
+        };
 
-            64 - bit
-        }
+        a_chunk = a >> 24;
+        if (a_chunk > 0) {
+            return 32 + leading_zeros_u8((a_chunk as u8))
+        };
+
+        a_chunk = a >> 16;
+        if (a_chunk > 0) {
+            return 40 + leading_zeros_u8((a_chunk as u8))
+        };
+
+        a_chunk = a >> 8;
+        if (a_chunk > 0) {
+            return 48 + leading_zeros_u8((a_chunk as u8))
+        };
+
+        56 + leading_zeros_u8((a as u8))
     }
 
     /// Similar to Rust `overflowing_add`.
