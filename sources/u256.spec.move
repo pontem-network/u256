@@ -8,6 +8,11 @@ spec u256::u256 {
     }
 
     spec max {
+        aborts_if false;
+        ensures result.v0 == U64_MAX;
+        ensures result.v1 == U64_MAX;
+        ensures result.v2 == U64_MAX;
+        ensures result.v3 == U64_MAX;
         ensures num_val(result) == max_u256();
     }
 
@@ -46,6 +51,23 @@ spec u256::u256 {
         ensures num_val(result) == val;
     }
 
+    spec compare {
+        aborts_if false;
+        ensures num_val(a) > num_val(b) ==> result == GREATER_THAN;
+        ensures num_val(a) < num_val(b) ==> result == LESS_THAN;
+        ensures num_val(a) == num_val(b) ==> result == EQUAL;
+    }
+
+    spec as_u128 {
+        aborts_if num_val(a) > U128_MAX with ECAST_OVERFLOW;
+        ensures num_val(result) == num_val(a);
+    }
+
+    spec as_u64 {
+        aborts_if num_val(a) > U64_MAX with ECAST_OVERFLOW;
+        ensures num_val(result) == num_val(a);
+    }
+
     spec sub {
         ensures num_val(result) == num_val(a) - num_val(b);
     }
@@ -59,15 +81,11 @@ spec u256::u256 {
     }
 
     spec shr {
-        pragma verify = false;
+        ensures num_val(result) == num_val(a) >> b;
     }
 
     spec shl {
-        pragma verify = false;
-    }
-
-    spec du256_to_u256 {
-        pragma verify = false;
+        ensures num_val(result) == num_val(a) << b;
     }
 
     spec add {
