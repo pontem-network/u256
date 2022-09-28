@@ -17,6 +17,8 @@ spec u256::u256 {
     }
 
     spec get {
+        pragma verify = false;
+
         aborts_if i > 3 with EWORDS_OVERFLOW;
         ensures i == 0 ==> result == a.v0;
         ensures i == 1 ==> result == a.v1;
@@ -25,6 +27,8 @@ spec u256::u256 {
     }
 
     spec put {
+        pragma verify = false;
+
         aborts_if i > 3 with EWORDS_OVERFLOW;
         ensures i == 0 ==> a.v0 == val;
         ensures i == 1 ==> a.v1 == val;
@@ -33,6 +37,8 @@ spec u256::u256 {
     }
 
     spec zero {
+        pragma verify = false;
+
         aborts_if false;
         ensures result.v0 == 0;
         ensures result.v1 == 0;
@@ -42,16 +48,22 @@ spec u256::u256 {
     }
 
     spec from_u128 {
+        pragma verify = false;
+
         aborts_if false;
         ensures num_val(result) == val;
     }
 
     spec from_u64 {
+        pragma verify = false;
+
         aborts_if false;
         ensures num_val(result) == val;
     }
 
     spec compare {
+        pragma verify = false;
+
         aborts_if false;
         ensures num_val(a) > num_val(b) ==> result == GREATER_THAN;
         ensures num_val(a) < num_val(b) ==> result == LESS_THAN;
@@ -59,20 +71,26 @@ spec u256::u256 {
     }
 
     spec as_u128 {
+        pragma verify = false;
+
         aborts_if num_val(a) > U128_MAX with ECAST_OVERFLOW;
-        ensures num_val(result) == num_val(a);
+        ensures result == num_val(a);
     }
 
     spec as_u64 {
+        pragma verify = false;
+
         aborts_if num_val(a) > U64_MAX with ECAST_OVERFLOW;
-        ensures num_val(result) == num_val(a);
+        ensures result == num_val(a);
     }
 
     spec sub {
+        pragma verify = false;
         ensures num_val(result) == num_val(a) - num_val(b);
     }
 
     spec mul {
+        pragma verify = false;
         ensures num_val(result) == num_val(a) * num_val(b);
     }
 
@@ -81,14 +99,17 @@ spec u256::u256 {
     }
 
     spec shr {
-        ensures num_val(result) == num_val(a) >> b;
+        pragma verify = false;
+        ensures num_val(result) == num_val(a) >> shift;
     }
 
     spec shl {
-        ensures num_val(result) == num_val(a) << b;
+        pragma verify = false;
+        ensures num_val(result) == num_val(a) << shift;
     }
 
     spec add {
+        pragma verify = false;
         ensures num_val(result) == num_val(a) + num_val(b);
     }
 }
