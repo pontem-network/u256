@@ -95,7 +95,8 @@ spec u256::u256 {
     }
 
     spec div {
-        pragma verify = false;
+        pragma opaque;
+        ensures num_val(result) == num_val(a) / num_val(b);
     }
 
     spec shr {

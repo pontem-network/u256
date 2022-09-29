@@ -362,29 +362,7 @@ module u256::u256 {
         let shift = a_bits - b_bits;
         b = shl(b, (shift as u8));
 
-        loop {
-            let cmp = compare(&a, &b);
-            if (cmp == GREATER_THAN || cmp == EQUAL) {
-                let index = shift / 64;
-                let m = get(&ret, index);
-                let tmp = ((shift % 64) as u8);
-                let c = if ((m >> tmp) % 2 == 0) {
-                    m + (1 << tmp)
-                } else {
-                    m
-                };
-                put(&mut ret, index, c);
-
-                a = sub(a, b);
-            };
-
-            b = shr(b, 1);
-            if (shift == 0) {
-                break
-            };
-
-            shift = shift - 1;
-        };
+        div_recursive(a, b, &mut ret, (shift as u8));
 
         ret
     }
@@ -619,6 +597,30 @@ module u256::u256 {
         };
 
         56 + leading_zeros_u8((a as u8))
+    }
+
+    fun div_recursive(a: U256, b: U256, ret: &mut U256, shift: u8) {
+        let cmp = compare(&a, &b);
+        if (cmp == GREATER_THAN || cmp == EQUAL) {
+            let index = shift / 64;
+            let m = get(ret, (index as u64));
+            let tmp = ((shift % 64) as u8);
+            let c = if ((m >> tmp) % 2 == 0) {
+                m + (1 << tmp)
+            } else {
+                m
+            };
+            put(ret, (index as u64), c);
+
+            a = sub(a, b);
+        };
+
+        b = shr(b, 1);
+        if (shift == 0) {
+            return
+        };
+
+        div_recursive(a, b, ret, shift - 1);
     }
 
     /// Similar to Rust `overflowing_add`.
