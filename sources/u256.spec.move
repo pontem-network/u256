@@ -113,4 +113,20 @@ spec u256::u256 {
         pragma verify = false;
         ensures num_val(result) == num_val(a) + num_val(b);
     }
+
+    spec bitxor {
+        pragma verify = false;
+    }
+
+    spec bitand {
+        pragma verify = false;
+    }
+
+    spec bitor {
+        pragma verify = false;
+    }
+
+    spec bitnot {
+        pragma verify = false;
+    }
 }
