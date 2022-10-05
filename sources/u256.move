@@ -652,7 +652,7 @@ module u256::u256 {
 
     /// Extracts two `u64` from `a` `u128`.
     fun split_u128(a: u128): (u64, u64) {
-        let a1 = ((a >> 64) as u64);
+        let a1 = ((a / 0x10000000000000000) as u64);
         let a2 =  ((a % (0xFFFFFFFFFFFFFFFF + 1)) as u64);
 
         (a1, a2)
