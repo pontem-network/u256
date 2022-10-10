@@ -208,7 +208,7 @@ module u256::u256 {
 
         // for b, we don't need to consider v2, v3 as it will be overflow
 
-        if (b.v0 == 0 && b.v1 == 0) {
+        if (b.v0 == 0 && b.v1 == 0 && b.v2 == 0 && b.v3 == 0) {
             return ret
         };
 
