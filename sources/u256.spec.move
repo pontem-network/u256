@@ -86,17 +86,19 @@ spec u256::u256 {
     // Basic math functions (add, sub, mul, div).
 
     spec add {
+        pragma verify = false;
         aborts_if num_val(a) + num_val(b) > max_u256() with EOVERFLOW;
         ensures num_val(result) == num_val(a) + num_val(b);
     }
 
     spec sub {
+        pragma verify = false;
         aborts_if num_val(a) - num_val(b) < 0 with EOVERFLOW;
         ensures num_val(result) == num_val(a) - num_val(b);
     }
 
     spec mul {
-        pragma verify = false;
+        // pragma verify = false;
         aborts_if (num_val(a) * num_val(b)) > max_u256() with EOVERFLOW;
         ensures num_val(result) == num_val(a) * num_val(b);
     }

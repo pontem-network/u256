@@ -208,7 +208,7 @@ module u256::u256 {
 
         // for b, we don't need to consider v2, v3 as it will be overflow
 
-        if (b.v0 == 0) {
+        if (b.v0 == 0 && b.v1 == 0) {
             return ret
         };
 
@@ -515,17 +515,17 @@ module u256::u256 {
 
     /// Get leading zeros of u64 blocks
     fun leading_zeros_u64_block(a: U256): u8 {
-        if (a.v0 == 0) {
-            return 4
-        } else if (a.v1 == 0) {
-            return 3
-        } else if (a.v2 == 0) {
-            return 2
-        } else if (a.v3 == 0) {
+        if (a.v3 != 0) {
+            return 0
+        } else if (a.v2 != 0) {
             return 1
+        } else if (a.v1 != 0) {
+            return 2
+        } else if (a.v0 != 0) {
+            return 3
         };
 
-        0
+        4
     }
 
     fun leading_zeros_u4(a: u8): u8 {
