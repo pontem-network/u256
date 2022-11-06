@@ -33,7 +33,7 @@ Add to `Move.toml`:
 ```toml
 [dependencies.U256]
 git = "https://github.com/pontem-network/U256.git"
-rev = "v0.3.8"
+rev = "v0.3.9"
 ```
 
 And then use in code:
