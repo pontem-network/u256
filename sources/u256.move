@@ -83,56 +83,49 @@ module u256::u256 {
         v3: u64,
     }
 
-    /// Double `U256` used for multiple (to store overflow).
-    struct DU256 has copy, drop, store {
-        v0: u64,
-        v1: u64,
-        v2: u64,
-        v3: u64,
-        v4: u64,
-        v5: u64,
-        v6: u64,
-        v7: u64,
-    }
-
     // Public functions.
     /// Adds two `U256` and returns sum.
     public fun add(a: U256, b: U256): U256 {
         let ret = zero();
-        let carry = 0u64;
+        let carry;
 
-        let i = 0;
-        while (i < WORDS) {
-            let a1 = get(&a, i);
-            let b1 = get(&b, i);
-
-            if (carry != 0) {
-                let (res1, is_overflow1) = overflowing_add(a1, b1);
-                let (res2, is_overflow2) = overflowing_add(res1, carry);
-                put(&mut ret, i, res2);
-
-                carry = 0;
-                if (is_overflow1) {
-                    carry = carry + 1;
-                };
-
-                if (is_overflow2) {
-                    carry = carry + 1;
-                }
-            } else {
-                let (res, is_overflow) = overflowing_add(a1, b1);
-                put(&mut ret, i, res);
-
-                carry = 0;
-                if (is_overflow) {
-                    carry = 1;
-                };
-            };
-
-            i = i + 1;
+        let (r, o) = overflowing_add(a.v0, b.v0);
+        ret.v0 = r;
+        carry = if (o) {
+            1
+        } else {
+            0
         };
 
-        assert!(carry == 0, EOVERFLOW);
+        let (r, o1) = overflowing_add(a.v1, b.v1);
+        let (r, o2) = overflowing_add(r, carry);
+        ret.v1 = r;
+
+        carry = if (o1 && o2) {
+            2
+        } else if (o1 || o2) {
+            1
+        } else {
+            0
+        };
+
+        let (r, o1) = overflowing_add(a.v2, b.v2);
+        let (r, o2) = overflowing_add(r, carry);
+        ret.v2 = r;
+
+        carry = if (o1 && o2) {
+            2
+        } else if (o1 || o2) {
+            1
+        } else {
+            0
+        };
+
+        let (r, o1) = overflowing_add(a.v3, b.v3);
+        let (r, o2) = overflowing_add(r, carry);
+        ret.v3 = r;
+
+        assert!(!o1 && !o2, EOVERFLOW);
 
         ret
     }
@@ -151,19 +144,28 @@ module u256::u256 {
 
     /// Compares two `U256` numbers.
     public fun compare(a: &U256, b: &U256): u8 {
-        let i = WORDS;
-        while (i > 0) {
-            i = i - 1;
-            let a1 = get(a, i);
-            let b1 = get(b, i);
+        if (a.v3 < b.v3) {
+            return LESS_THAN
+        } else if (a.v3 > b.v3) {
+            return GREATER_THAN
+        };
 
-            if (a1 != b1) {
-                if (a1 < b1) {
-                    return LESS_THAN
-                } else {
-                    return GREATER_THAN
-                }
-            }
+        if (a.v2 < b.v2) {
+            return LESS_THAN
+        } else if (a.v2 > b.v2) {
+            return GREATER_THAN
+        };
+
+        if (a.v1 < b.v1) {
+            return LESS_THAN
+        } else if (a.v1 > b.v1) {
+            return GREATER_THAN
+        };
+
+        if (a.v0 < b.v0) {
+            return LESS_THAN
+        } else if (a.v0 > b.v0) {
+            return GREATER_THAN
         };
 
         EQUAL
@@ -186,106 +188,161 @@ module u256::u256 {
         }
     }
 
+
     /// Multiples two `U256`.
     public fun mul(a: U256, b: U256): U256 {
-        let ret = DU256 {
-            v0: 0,
-            v1: 0,
-            v2: 0,
-            v3: 0,
-            v4: 0,
-            v5: 0,
-            v6: 0,
-            v7: 0,
+        let ret = zero();
+
+        // swap if a < b so that a is always bigger than b
+        if (compare(&a, &b) == LESS_THAN) {
+            let temp = a;
+            a = b;
+            b = temp;
         };
 
-        let i = 0;
-        while (i < WORDS) {
-            let carry = 0u64;
-            let b1 = get(&b, i);
+        // check overflow operations first
+        let a_zeroes = leading_zeros_u64_block(a);
+        let b_zeroes = leading_zeros_u64_block(b);
 
-            let j = 0;
-            while (j < WORDS) {
-                let a1 = get(&a, j);
+        assert!(a_zeroes + b_zeroes >= 3, EOVERFLOW);
 
-                if (a1 != 0 || carry != 0) {
-                    let (hi, low) = split_u128((a1 as u128) * (b1 as u128));
+        // for b, we don't need to consider v2, v3 as it will be overflow
 
-                    let overflow = {
-                        let existing_low = get_d(&ret, i + j);
-                        let (low, o) = overflowing_add(low, existing_low);
-                        put_d(&mut ret, i + j, low);
-                        if (o) {
-                            1
-                        } else {
-                            0
-                        }
-                    };
-
-                    carry = {
-                        let existing_hi = get_d(&ret, i + j + 1);
-                        let hi = hi + overflow;
-                        let (hi, o0) = overflowing_add(hi, carry);
-                        let (hi, o1) = overflowing_add(hi, existing_hi);
-                        put_d(&mut ret, i + j + 1, hi);
-
-                        if (o0 || o1) {
-                            1
-                        } else {
-                            0
-                        }
-                    };
-                };
-
-                j = j + 1;
-            };
-
-            i = i + 1;
+        if (b.v0 == 0 && b.v1 == 0 && b.v2 == 0 && b.v3 == 0) {
+            return ret
         };
 
-        let (r, overflow) = du256_to_u256(ret);
-        assert!(!overflow, EOVERFLOW);
-        r
+        let carry: u64;
+        let overflow: u64;
+        let (hi, low) = split_u128((a.v0 as u128) * (b.v0 as u128));
+        ret.v0 = low;
+        ret.v1 = hi;
+
+        let (hi, low) = split_u128((a.v1 as u128) * (b.v0 as u128));
+        let (low, o) = overflowing_add(ret.v1, low);
+        ret.v1 = low;
+        overflow = if (o) {
+            1
+        } else {
+            0
+        };
+        let (low, o) = overflowing_add(hi, overflow);
+        ret.v2 = low;
+        carry = if (o) {
+            1
+        } else {
+            0
+        };
+
+        let (hi, low) = split_u128((a.v2 as u128) * (b.v0 as u128));
+        let (low, o) = overflowing_add(ret.v2, low);
+        ret.v2 = low;
+        overflow = if (o) {
+            1
+        } else {
+            0
+        };
+        let (hi, o) = overflowing_add(hi, carry + overflow);
+        ret.v3 = hi;
+        assert!(!o, EOVERFLOW);
+
+        let (hi, low) = split_u128((a.v3 as u128) * (b.v0 as u128));
+        let (low, o) = overflowing_add(ret.v3, low);
+        ret.v3 = low;
+        assert!(hi == 0 && !o, EOVERFLOW);
+
+        //////////////
+
+        if (b.v1 == 0) {
+            return ret
+        };
+
+        let (hi, low) = split_u128((a.v0 as u128) * (b.v1 as u128));
+        let (low, o) = overflowing_add(ret.v1, low);
+        ret.v1 = low;
+        overflow = if (o) {
+            1
+        } else {
+            0
+        };
+        let (hi, o1) = overflowing_add(hi, overflow);
+        let (hi, o2) = overflowing_add(ret.v2, hi);
+        ret.v2 = hi;
+        carry = if (o1 || o2) {
+            1
+        } else {
+            0
+        };
+
+        let (hi, low) = split_u128((a.v1 as u128) * (b.v1 as u128));
+        let (low, o) = overflowing_add(ret.v2, low);
+        ret.v2 = low;
+        overflow = if (o) {
+            1
+        } else {
+            0
+        };
+        let (hi, o1) = overflowing_add(hi, carry + overflow);
+        let (hi, o2) = overflowing_add(ret.v3, hi);
+        ret.v3 = hi;
+        // if there is a carry out, it's overflow
+        assert!(!o1 && !o2, EOVERFLOW);
+
+        let (hi, low) = split_u128((a.v2 as u128) * (b.v1 as u128));
+        let (low, o) = overflowing_add(ret.v3, low);
+        ret.v3 = low;
+        assert!(hi == 0 && !o, EOVERFLOW);
+
+        // no need to calculate for a.v3 as it will be overflow
+        assert!(a.v3 == 0, EOVERFLOW);
+
+        ret
     }
 
     /// Subtracts two `U256`, returns result.
     public fun sub(a: U256, b: U256): U256 {
         let ret = zero();
 
-        let carry = 0u64;
+        let carry: u64;
 
-        let i = 0;
-        while (i < WORDS) {
-            let a1 = get(&a, i);
-            let b1 = get(&b, i);
-
-            if (carry != 0) {
-                let (res1, is_overflow1) = overflowing_sub(a1, b1);
-                let (res2, is_overflow2) = overflowing_sub(res1, carry);
-                put(&mut ret, i, res2);
-
-                carry = 0;
-                if (is_overflow1) {
-                    carry = carry + 1;
-                };
-
-                if (is_overflow2) {
-                    carry = carry + 1;
-                }
-            } else {
-                let (res, is_overflow) = overflowing_sub(a1, b1);
-                put(&mut ret, i, res);
-
-                carry = 0;
-                if (is_overflow) {
-                    carry = 1;
-                };
-            };
-
-            i = i + 1;
+        let (r, o) = overflowing_sub(a.v0, b.v0);
+        ret.v0 = r;
+        carry = if (o) {
+            1
+        } else {
+            0
         };
 
-        assert!(carry == 0, EOVERFLOW);
+        let (r, o1) = overflowing_sub(a.v1, b.v1);
+        let (r, o2) = overflowing_sub(r, carry);
+        ret.v1 = r;
+
+        carry = if (o1 && o2) {
+            2
+        } else if (o1 || o2) {
+            1
+        } else {
+            0
+        };
+
+        let (r, o1) = overflowing_sub(a.v2, b.v2);
+        let (r, o2) = overflowing_sub(r, carry);
+        ret.v2 = r;
+
+        carry = if (o1 && o2) {
+            2
+        } else if (o1 || o2) {
+            1
+        } else {
+            0
+        };
+
+        let (r, o1) = overflowing_sub(a.v3, b.v3);
+        let (r, o2) = overflowing_sub(r, carry);
+        ret.v3 = r;
+
+        assert!(!o1 && !o2, EOVERFLOW);
+
         ret
     }
 
@@ -305,24 +362,7 @@ module u256::u256 {
         let shift = a_bits - b_bits;
         b = shl(b, (shift as u8));
 
-        loop {
-            let cmp = compare(&a, &b);
-            if (cmp == GREATER_THAN || cmp == EQUAL) {
-                let index = shift / 64;
-                let m = get(&ret, index);
-                let c = m | 1 << ((shift % 64) as u8);
-                put(&mut ret, index, c);
-
-                a = sub(a, b);
-            };
-
-            b = shr(b, 1);
-            if (shift == 0) {
-                break
-            };
-
-            shift = shift - 1;
-        };
+        div_recursive(a, b, &mut ret, (shift as u8));
 
         ret
     }
@@ -331,14 +371,10 @@ module u256::u256 {
     fun bitxor(a: U256, b: U256): U256 {
         let ret = zero();
 
-        let i = 0;
-        while (i < WORDS) {
-            let a1 = get(&a, i);
-            let b1 = get(&b, i);
-            put(&mut ret, i, a1 ^ b1);
-
-            i = i + 1;
-        };
+        ret.v0 = a.v0 ^ b.v0;
+        ret.v1 = a.v1 ^ b.v1;
+        ret.v2 = a.v2 ^ b.v2;
+        ret.v3 = a.v3 ^ b.v3;
 
         ret
     }
@@ -347,14 +383,10 @@ module u256::u256 {
     fun bitand(a: U256, b: U256): U256 {
         let ret = zero();
 
-        let i = 0;
-        while (i < WORDS) {
-            let a1 = get(&a, i);
-            let b1 = get(&b, i);
-            put(&mut ret, i, a1 & b1);
-
-            i = i + 1;
-        };
+        ret.v0 = a.v0 & b.v0;
+        ret.v1 = a.v1 & b.v1;
+        ret.v2 = a.v2 & b.v2;
+        ret.v3 = a.v3 & b.v3;
 
         ret
     }
@@ -363,14 +395,22 @@ module u256::u256 {
     fun bitor(a: U256, b: U256): U256 {
         let ret = zero();
 
-        let i = 0;
-        while (i < WORDS) {
-            let a1 = get(&a, i);
-            let b1 = get(&b, i);
-            put(&mut ret, i, a1 | b1);
+        ret.v0 = a.v0 | b.v0;
+        ret.v1 = a.v1 | b.v1;
+        ret.v2 = a.v2 | b.v2;
+        ret.v3 = a.v3 | b.v3;
 
-            i = i + 1;
-        };
+        ret
+    }
+
+    /// Binary not for `a`
+    fun bitnot(a: U256): U256 {
+        let ret = zero();
+
+        ret.v0 = a.v0 ^ 0xFFFFFFFFFFFFFFFF;
+        ret.v1 = a.v1 ^ 0xFFFFFFFFFFFFFFFF;
+        ret.v2 = a.v2 ^ 0xFFFFFFFFFFFFFFFF;
+        ret.v3 = a.v3 ^ 0xFFFFFFFFFFFFFFFF;
 
         ret
     }
@@ -379,23 +419,27 @@ module u256::u256 {
     public fun shr(a: U256, shift: u8): U256 {
         let ret = zero();
 
-        let word_shift = (shift as u64) / 64;
-        let bit_shift = (shift as u64) % 64;
+        let word_shift = shift / 64;
+        let bit_shift = shift % 64;
 
-        let i = word_shift;
-        while (i < WORDS) {
-            let m = get(&a, i) >> (bit_shift as u8);
-            put(&mut ret, i - word_shift, m);
-            i = i + 1;
+        if (word_shift == 0) {
+            ret = a;
+        } else if (word_shift == 1) {
+            ret.v0 = a.v1;
+            ret.v1 = a.v2;
+            ret.v2 = a.v3;
+        } else if (word_shift == 2) {
+            ret.v0 = a.v2;
+            ret.v1 = a.v3;
+        } else if (word_shift == 3) {
+            ret.v0 = a.v3;
         };
 
         if (bit_shift > 0) {
-            let j = word_shift + 1;
-            while (j < WORDS) {
-                let m = get(&ret, j - word_shift - 1) + (get(&a, j) << (64 - (bit_shift as u8)));
-                put(&mut ret, j - word_shift - 1, m);
-                j = j + 1;
-            };
+            ret.v0 = (ret.v0 >> bit_shift) + (ret.v1 << (64 - bit_shift));
+            ret.v1 = (ret.v1 >> bit_shift) + (ret.v2 << (64 - bit_shift));
+            ret.v2 = (ret.v2 >> bit_shift) + (ret.v3 << (64 - bit_shift));
+            ret.v3 = ret.v3 >> bit_shift;
         };
 
         ret
@@ -405,27 +449,40 @@ module u256::u256 {
     public fun shl(a: U256, shift: u8): U256 {
         let ret = zero();
 
-        let word_shift = (shift as u64) / 64;
-        let bit_shift = (shift as u64) % 64;
+        let word_shift = shift / 64;
+        let bit_shift = shift % 64;
 
-        let i = word_shift;
-        while (i < WORDS) {
-            let m = get(&a, i - word_shift) << (bit_shift as u8);
-            put(&mut ret, i, m);
-            i = i + 1;
+        if (word_shift == 0) {
+            ret = a;
+        } else if (word_shift == 1) {
+            ret.v3 = a.v2;
+            ret.v2 = a.v1;
+            ret.v1 = a.v0;
+        } else if (word_shift == 2) {
+            ret.v3 = a.v1;
+            ret.v2 = a.v0;
+        } else if (word_shift == 3) {
+            ret.v3 = a.v0;
         };
 
         if (bit_shift > 0) {
-            let j = word_shift + 1;
-
-            while (j < WORDS) {
-                let m = get(&ret, j) + (get(&a, j - 1 - word_shift) >> (64 - (bit_shift as u8)));
-                put(&mut ret, j, m);
-                j = j + 1;
-            };
+            ret.v3 = (ret.v3 << bit_shift) + (ret.v2 >> (64 - bit_shift));
+            ret.v2 = (ret.v2 << bit_shift) + (ret.v1 >> (64 - bit_shift));
+            ret.v1 = (ret.v1 << bit_shift) + (ret.v0 >> (64 - bit_shift));
+            ret.v0 = ret.v0 << bit_shift;
         };
 
         ret
+    }
+
+    /// Returns max value.
+    public fun max(): U256 {
+        U256 {
+            v0: (U64_MAX as u64),
+            v1: (U64_MAX as u64),
+            v2: (U64_MAX as u64),
+            v3: (U64_MAX as u64)
+        }
     }
 
     /// Returns `U256` equals to zero.
@@ -441,18 +498,58 @@ module u256::u256 {
     // Private functions.
     /// Get bits used to store `a`.
     fun bits(a: &U256): u64 {
-        let i = 1;
-        while (i < WORDS) {
-            let a1 = get(a, WORDS - i);
-            if (a1 > 0) {
-                return ((0x40 * (WORDS - i + 1)) - (leading_zeros_u64(a1) as u64))
-            };
-
-            i = i + 1;
+        if (a.v3 > 0) {
+            return 0x40 * 4 - (leading_zeros_u64(a.v3) as u64)
         };
 
-        let a1 = get(a, 0);
-        0x40 - (leading_zeros_u64(a1) as u64)
+        if (a.v2 > 0) {
+            return 0x40 * 3 - (leading_zeros_u64(a.v2) as u64)
+        };
+
+        if (a.v1 > 0) {
+            return 0x40 * 2 - (leading_zeros_u64(a.v1) as u64)
+        };
+
+        0x40 - (leading_zeros_u64(a.v0) as u64)
+    }
+
+    /// Get leading zeros of u64 blocks
+    fun leading_zeros_u64_block(a: U256): u8 {
+        if (a.v3 != 0) {
+            return 0
+        } else if (a.v2 != 0) {
+            return 1
+        } else if (a.v1 != 0) {
+            return 2
+        } else if (a.v0 != 0) {
+            return 3
+        };
+
+        4
+    }
+
+    fun leading_zeros_u4(a: u8): u8 {
+        if (a == 0) {
+            4
+        } else if (a == 1) {
+            3
+        } else if (a <= 3) {
+            2
+        } else if (a <= 7) {
+            1
+        } else {
+            0
+        }
+    }
+
+    fun leading_zeros_u8(a: u8): u8 {
+        let a1 = a % 0x80;
+        let a2 = a >> 4;
+        if (a2 == 0) {
+            4 + leading_zeros_u4(a1)
+        } else {
+            leading_zeros_u4(a2)
+        }
     }
 
     /// Get leading zeros of a binary representation of `a`.
@@ -461,51 +558,84 @@ module u256::u256 {
             return 64
         };
 
-        let a1 = a & 0xFFFFFFFF;
-        let a2 = a >> 32;
+        // first 8 bits
+        let a_chunk = a >> 56;
 
-        if (a2 == 0) {
-            let bit = 32;
+        if (a_chunk > 0) {
+            return leading_zeros_u8((a_chunk as u8))
+        };
 
-            while (bit >= 1) {
-                let b = (a1 >> (bit-1)) & 1;
-                if (b != 0) {
-                    break
-                };
+        a_chunk = a >> 48;
+        if (a_chunk > 0) {
+            return 8 + leading_zeros_u8((a_chunk as u8))
+        };
 
-                bit = bit - 1;
+        a_chunk = a >> 40;
+        if (a_chunk > 0) {
+            return 16 + leading_zeros_u8((a_chunk as u8))
+        };
+
+        a_chunk = a >> 32;
+        if (a_chunk > 0) {
+            return 24 + leading_zeros_u8((a_chunk as u8))
+        };
+
+        a_chunk = a >> 24;
+        if (a_chunk > 0) {
+            return 32 + leading_zeros_u8((a_chunk as u8))
+        };
+
+        a_chunk = a >> 16;
+        if (a_chunk > 0) {
+            return 40 + leading_zeros_u8((a_chunk as u8))
+        };
+
+        a_chunk = a >> 8;
+        if (a_chunk > 0) {
+            return 48 + leading_zeros_u8((a_chunk as u8))
+        };
+
+        56 + leading_zeros_u8((a as u8))
+    }
+
+    fun div_recursive(a: U256, b: U256, ret: &mut U256, shift: u8) {
+        let cmp = compare(&a, &b);
+        if (cmp == GREATER_THAN || cmp == EQUAL) {
+            let index = shift / 64;
+            let m = get(ret, (index as u64));
+            let tmp = ((shift % 64) as u8);
+            let c = if ((m >> tmp) % 2 == 0) {
+                m + (1 << tmp)
+            } else {
+                m
             };
+            put(ret, (index as u64), c);
 
-            (32 - bit) + 32
-        } else {
-            let bit = 64;
-            while (bit >= 1) {
-                let b = (a >> (bit-1)) & 1;
-                if (b != 0) {
-                    break
-                };
-                bit = bit - 1;
-            };
+            a = sub(a, b);
+        };
 
-            64 - bit
-        }
+        b = shr(b, 1);
+        if (shift == 0) {
+            return
+        };
+
+        div_recursive(a, b, ret, shift - 1);
     }
 
     /// Similar to Rust `overflowing_add`.
     /// Returns a tuple of the addition along with a boolean indicating whether an arithmetic overflow would occur.
     /// If an overflow would have occurred then the wrapped value is returned.
     fun overflowing_add(a: u64, b: u64): (u64, bool) {
-        let a128 = (a as u128);
-        let b128 = (b as u128);
+        let r = (U64_MAX as u64) - b;
+        if (r < a) {
+            return (a - r - 1, true)
+        };
+        r = (U64_MAX as u64) - a;
+        if (r < b) {
+            return (b - r - 1, true)
+        };
 
-        let r = a128 + b128;
-        if (r > U64_MAX) {
-            // overflow
-            let overflow = r - U64_MAX - 1;
-            ((overflow as u64), true)
-        } else {
-            (((a128 + b128) as u64), false)
-        }
+        (a + b, false)
     }
 
     /// Similar to Rust `overflowing_sub`.
@@ -522,8 +652,8 @@ module u256::u256 {
 
     /// Extracts two `u64` from `a` `u128`.
     fun split_u128(a: u128): (u64, u64) {
-        let a1 = ((a >> 64) as u64);
-        let a2 = ((a & 0xFFFFFFFFFFFFFFFF) as u64);
+        let a1 = ((a / 0x10000000000000000) as u64);
+        let a2 =  ((a % (0xFFFFFFFFFFFFFFFF + 1)) as u64);
 
         (a1, a2)
     }
@@ -543,29 +673,6 @@ module u256::u256 {
         }
     }
 
-    /// Get word from `DU256` by index.
-    fun get_d(a: &DU256, i: u64): u64 {
-        if (i == 0) {
-            a.v0
-        } else if (i == 1) {
-            a.v1
-        } else if (i == 2) {
-            a.v2
-        } else if (i == 3) {
-            a.v3
-        } else if (i == 4) {
-            a.v4
-        } else if (i == 5) {
-            a.v5
-        } else if (i == 6) {
-            a.v6
-        } else if (i == 7) {
-            a.v7
-        } else {
-            abort EWORDS_OVERFLOW
-        }
-    }
-
     /// Put new word `val` into `U256` by index `i`.
     fun put(a: &mut U256, i: u64, val: u64) {
         if (i == 0) {
@@ -579,167 +686,6 @@ module u256::u256 {
         } else {
             abort EWORDS_OVERFLOW
         }
-    }
-
-    /// Put new word into `DU256` by index `i`.
-    fun put_d(a: &mut DU256, i: u64, val: u64) {
-        if (i == 0) {
-            a.v0 = val;
-        } else if (i == 1) {
-            a.v1 = val;
-        } else if (i == 2) {
-            a.v2 = val;
-        } else if (i == 3) {
-            a.v3 = val;
-        } else if (i == 4) {
-            a.v4 = val;
-        } else if (i == 5) {
-            a.v5 = val;
-        } else if (i == 6) {
-            a.v6 = val;
-        } else if (i == 7) {
-            a.v7 = val;
-        } else {
-            abort EWORDS_OVERFLOW
-        }
-    }
-
-    /// Convert `DU256` to `U256`.
-    fun du256_to_u256(a: DU256): (U256, bool) {
-        let b = U256 {
-            v0: a.v0,
-            v1: a.v1,
-            v2: a.v2,
-            v3: a.v3,
-        };
-
-        let overflow = false;
-        if (a.v4 != 0 || a.v5 != 0 || a.v6 != 0 || a.v7 != 0) {
-            overflow = true;
-        };
-
-        (b, overflow)
-    }
-
-    // Tests.
-    #[test]
-    fun test_get_d() {
-        let a = DU256 {
-            v0: 1,
-            v1: 2,
-            v2: 3,
-            v3: 4,
-            v4: 5,
-            v5: 6,
-            v6: 7,
-            v7: 8,
-        };
-
-        assert!(get_d(&a, 0) == 1, 0);
-        assert!(get_d(&a, 1) == 2, 1);
-        assert!(get_d(&a, 2) == 3, 2);
-        assert!(get_d(&a, 3) == 4, 3);
-        assert!(get_d(&a, 4) == 5, 4);
-        assert!(get_d(&a, 5) == 6, 5);
-        assert!(get_d(&a, 6) == 7, 6);
-        assert!(get_d(&a, 7) == 8, 7);
-    }
-
-    #[test]
-    #[expected_failure(abort_code = 1)]
-    fun test_get_d_overflow() {
-        let a = DU256 {
-            v0: 1,
-            v1: 2,
-            v2: 3,
-            v3: 4,
-            v4: 5,
-            v5: 6,
-            v6: 7,
-            v7: 8,
-        };
-
-        get_d(&a, 8);
-    }
-
-    #[test]
-    fun test_put_d() {
-        let a = DU256 {
-            v0: 1,
-            v1: 2,
-            v2: 3,
-            v3: 4,
-            v4: 5,
-            v5: 6,
-            v6: 7,
-            v7: 8,
-        };
-
-        put_d(&mut a, 0, 10);
-        put_d(&mut a, 1, 20);
-        put_d(&mut a, 2, 30);
-        put_d(&mut a, 3, 40);
-        put_d(&mut a, 4, 50);
-        put_d(&mut a, 5, 60);
-        put_d(&mut a, 6, 70);
-        put_d(&mut a, 7, 80);
-
-        assert!(get_d(&a, 0) == 10, 0);
-        assert!(get_d(&a, 1) == 20, 1);
-        assert!(get_d(&a, 2) == 30, 2);
-        assert!(get_d(&a, 3) == 40, 3);
-        assert!(get_d(&a, 4) == 50, 4);
-        assert!(get_d(&a, 5) == 60, 5);
-        assert!(get_d(&a, 6) == 70, 6);
-        assert!(get_d(&a, 7) == 80, 7);
-    }
-
-    #[test]
-    #[expected_failure(abort_code = 1)]
-    fun test_put_d_overflow() {
-        let a = DU256 {
-            v0: 1,
-            v1: 2,
-            v2: 3,
-            v3: 4,
-            v4: 5,
-            v5: 6,
-            v6: 7,
-            v7: 8,
-        };
-
-        put_d(&mut a, 8, 0);
-    }
-
-    #[test]
-    fun test_du256_to_u256() {
-        let a = DU256 {
-            v0: 255,
-            v1: 100,
-            v2: 50,
-            v3: 300,
-            v4: 0,
-            v5: 0,
-            v6: 0,
-            v7: 0,
-        };
-
-        let (m, overflow) = du256_to_u256(a);
-        assert!(!overflow, 0);
-        assert!(m.v0 == a.v0, 1);
-        assert!(m.v1 == a.v1, 2);
-        assert!(m.v2 == a.v2, 3);
-        assert!(m.v3 == a.v3, 4);
-
-        a.v4 = 100;
-        a.v5 = 5;
-
-        let (m, overflow) = du256_to_u256(a);
-        assert!(overflow, 5);
-        assert!(m.v0 == a.v0, 6);
-        assert!(m.v1 == a.v1, 7);
-        assert!(m.v2 == a.v2, 8);
-        assert!(m.v3 == a.v3, 9);
     }
 
     #[test]
@@ -812,6 +758,11 @@ module u256::u256 {
 
         s = as_u128(add(a, b));
         assert!(s == (U64_MAX + U64_MAX), 1);
+
+        let a = zero();
+        let b = zero();
+        let s = add(a, b);
+        assert!(as_u128(s) == 0, 2);
     }
 
     #[test]
@@ -955,6 +906,25 @@ module u256::u256 {
         assert!(a.v1 == 0, 2);
         assert!(a.v2 == 0, 3);
         assert!(a.v3 == 0, 4);
+    }
+
+    #[test]
+    fun test_not() {
+        let a = from_u128(0);
+        let r = bitnot(a);
+
+        assert!(r.v0 == 0xFFFFFFFFFFFFFFFF, 0);
+        assert!(r.v1 == 0xFFFFFFFFFFFFFFFF, 1);
+        assert!(r.v2 == 0xFFFFFFFFFFFFFFFF, 2);
+        assert!(r.v3 == 0xFFFFFFFFFFFFFFFF, 3);
+
+        let a = from_u128(0x0f0f0f0f0f0f0f0fu128);
+        let r = bitnot(a);
+
+        assert!(r.v0 == 0xf0f0f0f0f0f0f0f0, 4);
+        assert!(r.v1 == 0xFFFFFFFFFFFFFFFF, 5);
+        assert!(r.v2 == 0xFFFFFFFFFFFFFFFF, 6);
+        assert!(r.v3 == 0xFFFFFFFFFFFFFFFF, 7);
     }
 
     #[test]
