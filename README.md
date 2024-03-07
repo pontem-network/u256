@@ -17,9 +17,9 @@ Supported features:
 
 The audit still missed, so use at your own risk.
 
-### Build
+### Compile
 
-    aptos move build
+    aptos move compile
 
 ### Test
 
